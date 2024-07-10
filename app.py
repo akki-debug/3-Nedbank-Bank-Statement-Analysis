@@ -33,14 +33,9 @@ def parse_text_to_df(text):
 
 st.title("Bank Statement Data Extractor")
 
-# Function to display DataFrame with full content of each cell
+# Function to display DataFrame in tabular form
 def display_full_dataframe(df):
-    # Display column names and values
-    for col in df.columns:
-        st.write(f"**{col}**")
-        for value in df[col]:
-            st.write(value)
-        st.write("---")
+    st.write(df)
 
 uploaded_file = st.file_uploader("Upload Bank Statement PDF", type="pdf")
 if uploaded_file is not None:
