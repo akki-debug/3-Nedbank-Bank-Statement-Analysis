@@ -18,8 +18,8 @@ if uploaded_file is not None:
             for page in pdf.pages:
                 text += page.extract_text()
 
-        # Debugging: Print extracted text
-        st.text_area('Extracted Text', text[:2000])  # Show the first 2000 characters of the text for inspection
+        # Display the extracted text
+        st.text_area('Extracted Text', text)
 
         # Extract transactions from the text using regex
         transactions = []
