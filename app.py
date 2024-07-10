@@ -2,9 +2,7 @@ import streamlit as st
 import pandas as pd
 from PyPDF2 import PdfReader
 import re
-from io import BytesIO
 from sklearn.tree import DecisionTreeClassifier
-import numpy as np
 
 # Function to extract text from PDF
 def extract_text_from_pdf(file):
@@ -44,7 +42,7 @@ def predict_eligibility(df):
     model.fit(X, y)
     
     predictions = model.predict(X)
-    df["Eligibility"] = ["Eligible" if pred == 1 else "Not Eligible" for pred in predictions]
+    df["Eligibility"] = predictions
     return df
 
 st.title("Bank Statement Loan Eligibility Checker")
@@ -54,10 +52,16 @@ if uploaded_file is not None:
     text = extract_text_from_pdf(uploaded_file)
     df = parse_text_to_df(text)
     
-    st.write("Extracted Data:")
-    st.dataframe(df)
-    
+    # Combine data extraction and eligibility prediction into a single display
     df = predict_eligibility(df)
     
-    st.write("Eligibility Predictions:")
-    st.dataframe(df)
+    st.write("Bank Statement Data and Eligibility Predictions:")
+    st.dataframe(df, height=800)  # Display all rows, adjust height as needed
+    
+    # Display eligibility as one-liner with color
+    st.write("Eligibility Status:")
+    for index, row in df.iterrows():
+        if row['Eligibility'] == 1:
+            st.write(f"{row['Description']} - <span style='color:green'>Eligible</span>")
+        else:
+            st.write(f"{row['Description']} - <span style='color:red'>Not Eligible</span>")
