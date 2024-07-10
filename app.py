@@ -2,7 +2,6 @@ import streamlit as st
 import pdfplumber
 import re
 import pandas as pd
-import numpy as np
 
 st.set_page_config(page_title='Bank Statement Data Extraction & Loan Eligibility', page_icon=':moneybag:')
 
@@ -19,9 +18,12 @@ if uploaded_file is not None:
             for page in pdf.pages:
                 text += page.extract_text()
 
+        # Debugging: Print extracted text
+        st.text_area('Extracted Text', text[:2000])  # Show the first 2000 characters of the text for inspection
+
         # Extract transactions from the text using regex
         transactions = []
-        # Regular expression to match transactions
+        # Regular expression to match transactions (example pattern)
         transaction_pattern = re.compile(r'(\d{2}/\d{2}/\d{4})\s+([^\d]+)\s+([\d,]+\.\d{2})\s+([\d,]+\.\d{2})\s+([\d,]+\.\d{2})')
 
         for line in text.split('\n'):
@@ -34,27 +36,31 @@ if uploaded_file is not None:
                 credits = float(credits_str.replace(',', '').replace('R', '').replace(' ', ''))
                 transactions.append([date_str, description.strip(), fees, debits, credits])
 
-        # Convert transactions to a DataFrame
-        df = pd.DataFrame(transactions, columns=['Date', 'Description', 'Fees', 'Debits', 'Credits'])
-        
-        # Convert 'Date' to datetime format
-        df['Date'] = pd.to_datetime(df['Date'], format='%d/%m/%Y')
+        # Check if any transactions were extracted
+        if transactions:
+            # Convert transactions to a DataFrame
+            df = pd.DataFrame(transactions, columns=['Date', 'Description', 'Fees', 'Debits', 'Credits'])
+            
+            # Convert 'Date' to datetime format
+            df['Date'] = pd.to_datetime(df['Date'], format='%d/%m/%Y')
 
-        # Display the extracted data
-        st.subheader('Extracted Transactions')
-        st.dataframe(df, use_container_width=True)
+            # Display the extracted data
+            st.subheader('Extracted Transactions')
+            st.dataframe(df, use_container_width=True)
 
-        # Feature extraction
-        total_credits = df['Credits'].sum()
-        total_debits = df['Debits'].sum()
+            # Feature extraction
+            total_credits = df['Credits'].sum()
+            total_debits = df['Debits'].sum()
 
-        # Loan eligibility based on specified conditions
-        eligible = total_credits > abs(total_debits) and total_credits > 1.25 * abs(total_debits)
+            # Loan eligibility based on specified conditions
+            eligible = total_credits > abs(total_debits) and total_credits > 1.25 * abs(total_debits)
 
-        # Display result with color
-        result = 'Eligible for Loan' if eligible else 'Not Eligible for Loan'
-        color = 'green' if eligible else 'red'
-        st.markdown(f'<p style="color:{color};font-size:24px;">{result}</p>', unsafe_allow_html=True)
+            # Display result with color
+            result = 'Eligible for Loan' if eligible else 'Not Eligible for Loan'
+            color = 'green' if eligible else 'red'
+            st.markdown(f'<p style="color:{color};font-size:24px;">{result}</p>', unsafe_allow_html=True)
+        else:
+            st.error("No transactions were extracted. Please check the PDF format and the regex pattern.")
 
     except Exception as e:
         st.error(f"Error: {e}")
