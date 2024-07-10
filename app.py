@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from PyPDF2 import PdfFileReader
+from PyPDF2 import PdfReader
 import re
 from io import BytesIO
 from sklearn.tree import DecisionTreeClassifier
@@ -8,11 +8,10 @@ import numpy as np
 
 # Function to extract text from PDF
 def extract_text_from_pdf(file):
-    pdf = PdfFileReader(file)
+    pdf = PdfReader(file)
     text = ''
-    for page_num in range(pdf.getNumPages()):
-        page = pdf.getPage(page_num)
-        text += page.extractText()
+    for page_num in range(len(pdf.pages)):
+        text += pdf.pages[page_num].extract_text()
     return text
 
 # Function to parse extracted text into a DataFrame
