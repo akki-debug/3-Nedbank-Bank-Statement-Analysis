@@ -15,17 +15,17 @@ def extract_text_from_pdf(file):
 def parse_text_to_df(text):
     rows = []
     lines = text.split('\n')
-    transaction_pattern = re.compile(r'(\d{0,6})\s+(\d{2}/\d{2}/\d{4})\s+(.*?)\s+((?:\d{1,3},?)+\.\d{2})?\s+((?:\d{1,3},?)+\.\d{2})?\s+((?:\d{1,3},?)+\.\d{2})?\s+((?:\d{1,3},?)+\.\d{2})')
+    transaction_pattern = re.compile(r'(\d{2}/\d{2}/\d{4})\s+(.*?)\s+((?:\d{1,3},?)+\.\d{2})?\s+((?:\d{1,3},?)+\.\d{2})?\s+((?:\d{1,3},?)+\.\d{2})?\s+((?:\d{1,3},?)+\.\d{2})?')
 
     for line in lines:
         match = transaction_pattern.match(line)
         if match:
             rows.append(match.groups())
         else:
-            # Handle cases where the pattern does not match
-            rows.append((None, None, None, None, None, None, None))
+            # Handle cases where the pattern does not match by appending None values
+            rows.append((None, None, None, None, None, None))
 
-    columns = ["Tran list no", "Date", "Description", "Fees (R)", "Debits (R)", "Credits (R)", "Balance (R)"]
+    columns = ["Date", "Description", "Fees (R)", "Debits (R)", "Credits (R)", "Balance (R)"]
     df = pd.DataFrame(rows, columns=columns)
     
     # Convert numeric columns from strings to floats
