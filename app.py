@@ -4,6 +4,7 @@ import re
 import pandas as pd
 import plotly.express as px
 from sklearn.tree import DecisionTreeClassifier
+import numpy as np
 
 # Function to parse PDF and extract data
 def parse_pdf(file):
@@ -65,30 +66,15 @@ def compute_metrics(df):
     num_transactions = len(df)
     return avg_daily_expense, total_expense, max_expense, min_expense, num_transactions
 
-# Function to train the decision tree model
-def train_decision_tree_model():
-    # Sample data for training
-    X = [[10000, -5000], [15000, -7000], [20000, -10000], [12000, -4000]]
-    y = [1, 1, 0, 1]  # 1 for eligible, 0 for not eligible
-
-    # Train the model
-    model = DecisionTreeClassifier()
-    model.fit(X, y)
-    
-    return model
-
-# Function to check loan eligibility using decision tree model
-def check_loan_eligibility(df, model):
-    # Assuming we use the total credits and debits for loan eligibility
+# Function to check loan eligibility using specific conditions
+def check_loan_eligibility(df):
     total_credits = df[df['Amount'] > 0]['Amount'].sum()
     total_debits = df[df['Amount'] < 0]['Amount'].sum()
     
-    # Preparing the feature vector for prediction
-    feature_vector = [[total_credits, total_debits]]
-    
-    # Predicting loan eligibility
-    prediction = model.predict(feature_vector)
-    return prediction[0]
+    if total_credits > total_debits and total_credits > 1.25 * abs(total_debits):
+        return 1  # Eligible
+    else:
+        return 0  # Not eligible
 
 # Streamlit application
 def main():
@@ -116,11 +102,8 @@ def main():
             # Categorize expenses
             df['Category'] = df['Description'].apply(categorize_expense)
             
-            # Train the decision tree model
-            model = train_decision_tree_model()
-            
-            # Check loan eligibility
-            loan_eligibility = check_loan_eligibility(df, model)
+            # Check loan eligibility using specific conditions
+            loan_eligibility = check_loan_eligibility(df)
             st.subheader('Loan Eligibility')
             if loan_eligibility:
                 st.markdown('<p style="color:green;">The user is eligible for a loan.</p>', unsafe_allow_html=True)
