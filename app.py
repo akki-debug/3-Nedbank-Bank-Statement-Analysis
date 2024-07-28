@@ -116,6 +116,17 @@ def main():
             # Categorize expenses
             df['Category'] = df['Description'].apply(categorize_expense)
             
+            # Train the decision tree model
+            model = train_decision_tree_model()
+            
+            # Check loan eligibility
+            loan_eligibility = check_loan_eligibility(df, model)
+            st.subheader('Loan Eligibility')
+            if loan_eligibility:
+                st.markdown('<p style="color:green;">The user is eligible for a loan.</p>', unsafe_allow_html=True)
+            else:
+                st.markdown('<p style="color:red;">The user is not eligible for a loan.</p>', unsafe_allow_html=True)
+
             # Display parsed data
             st.subheader('Parsed Data')
             st.write(df)
@@ -149,17 +160,6 @@ def main():
             # Line chart: Daily expense trend
             fig_line = px.line(df, x='Date', y='Amount', title='Daily Expense Trend')
             st.plotly_chart(fig_line)
-
-            # Train the decision tree model
-            model = train_decision_tree_model()
-            
-            # Check loan eligibility
-            loan_eligibility = check_loan_eligibility(df, model)
-            st.subheader('Loan Eligibility')
-            if loan_eligibility:
-                st.write("The user is eligible for a loan.")
-            else:
-                st.write("The user is not eligible for a loan.")
         else:
             st.write("No transactions found in the uploaded statement.")
     else:
