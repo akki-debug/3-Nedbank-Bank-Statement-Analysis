@@ -1,5 +1,6 @@
 streamlit
-PyPDF2
+pdfplumber
 pandas
-numpy
+plotly
 scikit-learn
+joblib
