@@ -17,14 +17,12 @@ def parse_pdf(file):
 # Function to process parsed text into a DataFrame
 def process_text_to_df(text):
     transactions = []
-    # Regular expression to match transactions for Nedbank statement
     transaction_pattern = re.compile(r'(\d{2}/\d{2}/\d{4})\s+(.+?)\s+(-?R?\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s+(-?R?\d{1,3}(?:,\d{3})*(?:\.\d{2})?)')
     
     for line in text.split('\n'):
         match = transaction_pattern.search(line)
         if match:
             date_str, description, amount_str, balance_str = match.groups()
-            # Removing unwanted characters and converting to float
             amount = float(amount_str.replace(',', '').replace('R', '').replace(' ', ''))
             balance = float(balance_str.replace(',', '').replace('R', '').replace(' ', ''))
             transactions.append([date_str, description.strip(), amount, balance])
@@ -78,15 +76,26 @@ def check_loan_eligibility(df):
 
 # Streamlit application
 def main():
-    st.title('Bank Statement Affordability and Loan Eligibility Analysis')
+    st.title('Upload Your Bank Statement')
+    
+    st.write(
+        """
+        <style>
+        .success-message {
+            font-size: 1.25rem;
+            color: green;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+    st.markdown('<p class="success-message">Congratulations! You\'ve successfully passed the initial eligibility check. Please submit your bank statement so we can complete the final eligibility review.</p>', unsafe_allow_html=True)
 
     # File upload for PDF statement
-    st.sidebar.header('Upload Bank Statement (PDF)')
-    uploaded_file = st.sidebar.file_uploader('Choose a PDF file', type='pdf')
-
+    uploaded_file = st.file_uploader('Please upload your bank statement', type='pdf')
+    
     if uploaded_file is not None:
-        # Process PDF and display data
-        st.subheader('Uploaded Bank Statement')
         st.write(f'Filename: {uploaded_file.name}')
 
         # Parse PDF
@@ -99,25 +108,18 @@ def main():
         df['Date'] = pd.to_datetime(df['Date'], format='%d/%m/%Y')
 
         if not df.empty:
-            # Categorize expenses
             df['Category'] = df['Description'].apply(categorize_expense)
-            
-            # Check loan eligibility using specific conditions
             loan_eligibility = check_loan_eligibility(df)
-            st.subheader('Loan Eligibility')
             if loan_eligibility:
                 st.markdown('<p style="color:green;">The user is eligible for a loan.</p>', unsafe_allow_html=True)
             else:
                 st.markdown('<p style="color:red;">The user is not eligible for a loan.</p>', unsafe_allow_html=True)
 
-            # Display parsed data
             st.subheader('Parsed Data')
             st.write(df)
 
-            # Compute metrics
             avg_daily_expense, total_expense, max_expense, min_expense, num_transactions = compute_metrics(df)
 
-            # Display metrics
             st.subheader('Key Metrics')
             st.write(f'Average Daily Expense: R{avg_daily_expense:.2f}')
             st.write(f'Total Expense: R{total_expense:.2f}')
@@ -125,22 +127,17 @@ def main():
             st.write(f'Minimum Expense: R{min_expense:.2f}')
             st.write(f'Number of Transactions: {num_transactions}')
 
-            # Visualizations
             st.subheader('Expense Overview')
 
-            # Bar chart: Total expenses per category
             fig_bar = px.bar(df, x='Date', y='Amount', color='Category', title='Total Expenses per Date')
             st.plotly_chart(fig_bar)
 
-            # Pie chart: Expense distribution by category
             fig_pie_category = px.pie(df, values='Amount', names='Category', title='Expense Distribution by Category')
             st.plotly_chart(fig_pie_category)
 
-            # Pie chart: Expense distribution by description
             fig_pie_description = px.pie(df, values='Amount', names='Description', title='Expense Distribution by Description')
             st.plotly_chart(fig_pie_description)
 
-            # Line chart: Daily expense trend
             fig_line = px.line(df, x='Date', y='Amount', title='Daily Expense Trend')
             st.plotly_chart(fig_line)
         else:
