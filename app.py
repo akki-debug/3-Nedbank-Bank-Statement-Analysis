@@ -4,8 +4,6 @@ import re
 import pandas as pd
 import plotly.express as px
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
 import numpy as np
 
 # Function to parse PDF and extract data
@@ -66,33 +64,41 @@ def compute_metrics(df):
     num_transactions = len(df)
     return avg_daily_expense, total_expense, max_expense, min_expense, num_transactions
 
-# Function to train the decision tree model
-def train_decision_tree_model(data):
-    X = data[['Closing Balance', 'Credit Transactions', 'Total Credit']]
-    y = data['Eligibility']
-    
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    
-    model = DecisionTreeClassifier()
-    model.fit(X_train, y_train)
-    
-    y_pred = model.predict(X_test)
-    accuracy = accuracy_score(y_test, y_pred)
-    
-    return model, accuracy
-
-# Function to predict eligibility using the decision tree model
-def predict_eligibility(model, df):
+# Function to check loan eligibility using specific conditions
+def check_loan_eligibility(df):
     total_credits = df[df['Amount'] > 0]['Amount'].sum()
     total_debits = df[df['Amount'] < 0]['Amount'].sum()
-    closing_balance = df['Balance'].iloc[-1]
-    credit_transactions = df[df['Amount'] > 0].shape[0]
     
-    input_data = pd.DataFrame([[closing_balance, credit_transactions, total_credits]],
-                              columns=['Closing Balance', 'Credit Transactions', 'Total Credit'])
+    if total_credits > total_debits and total_credits > 1.25 * abs(total_debits):
+        return 1  # Eligible
+    else:
+        return 0  # Not eligible
+
+# Function to train and predict using Decision Tree Classifier
+def train_decision_tree_classifier(df):
+    # Creating dummy training data
+    training_data = {
+        'Closing Balance': df['Balance'].values,
+        'Total Credit': [df[df['Amount'] > 0]['Amount'].sum()] * len(df),
+        'Eligibility': [check_loan_eligibility(df)] * len(df)
+    }
     
-    prediction = model.predict(input_data)
-    return prediction[0]
+    training_df = pd.DataFrame(training_data)
+    
+    X_train = training_df[['Closing Balance', 'Total Credit']]
+    y_train = training_df['Eligibility']
+
+    # Training Decision Tree Classifier
+    classifier = DecisionTreeClassifier()
+    classifier.fit(X_train, y_train)
+
+    # Predicting with the trained model
+    closing_balance = df['Balance'].iloc[-1]  # Using last balance for prediction
+    total_credit = df[df['Amount'] > 0]['Amount'].sum()
+
+    loan_eligibility_prediction = classifier.predict([[closing_balance, total_credit]])[0]
+    
+    return loan_eligibility_prediction
 
 # Streamlit application
 def main():
@@ -129,15 +135,9 @@ def main():
 
         if not df.empty:
             df['Category'] = df['Description'].apply(categorize_expense)
-            
-            # Train the model using a provided dataset
-            nedbank_data = pd.read_csv('nedbank.csv')  # Using 'nedbank.csv' dataset
-            model, accuracy = train_decision_tree_model(nedbank_data)
-            st.write(f'Model accuracy: {accuracy * 100:.2f}%')
+            loan_eligibility = train_decision_tree_classifier(df)
 
-            # Predict eligibility using the trained model
-            eligibility = predict_eligibility(model, df)
-            if eligibility == 1:
+            if loan_eligibility:
                 st.markdown('<p style="color:green;">The user is eligible for a loan.</p>', unsafe_allow_html=True)
             else:
                 st.markdown('<p style="color:red;">The user is not eligible for a loan.</p>', unsafe_allow_html=True)
