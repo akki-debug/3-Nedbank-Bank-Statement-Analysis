@@ -64,26 +64,10 @@ def compute_metrics(df):
     num_transactions = len(df)
     return avg_daily_expense, total_expense, max_expense, min_expense, num_transactions
 
-# Function to check loan eligibility using specific conditions
-def check_loan_eligibility(df):
-    total_credits = df[df['Amount'] > 0]['Amount'].sum()
-    total_debits = df[df['Amount'] < 0]['Amount'].sum()
-    
-    if total_credits > total_debits and total_credits > 1.25 * abs(total_debits):
-        return 1  # Eligible
-    else:
-        return 0  # Not eligible
-
-# Function to train and predict using Decision Tree Classifier with dummy data
+# Function to train and predict using Decision Tree Classifier with CSV data
 def train_decision_tree_classifier(df):
-    # Dummy training data (4-5 examples)
-    training_data = {
-        'Closing Balance': [1000, 1500, 2000, 2500, 3000],
-        'Total Credit': [2000, 2500, 3000, 4000, 5000],
-        'Eligibility': [1, 0, 1, 0, 1]  # 1: Eligible, 0: Not Eligible
-    }
-    
-    training_df = pd.DataFrame(training_data)
+    # Load dummy training data from CSV
+    training_df = pd.read_csv('nedbank.csv')
     
     X_train = training_df[['Closing Balance', 'Total Credit']]
     y_train = training_df['Eligibility']
