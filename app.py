@@ -74,13 +74,13 @@ def check_loan_eligibility(df):
     else:
         return 0  # Not eligible
 
-# Function to train and predict using Decision Tree Classifier
+# Function to train and predict using Decision Tree Classifier with dummy data
 def train_decision_tree_classifier(df):
-    # Creating dummy training data
+    # Dummy training data (4-5 examples)
     training_data = {
-        'Closing Balance': df['Balance'].values,
-        'Total Credit': [df[df['Amount'] > 0]['Amount'].sum()] * len(df),
-        'Eligibility': [check_loan_eligibility(df)] * len(df)
+        'Closing Balance': [1000, 1500, 2000, 2500, 3000],
+        'Total Credit': [2000, 2500, 3000, 4000, 5000],
+        'Eligibility': [1, 0, 1, 0, 1]  # 1: Eligible, 0: Not Eligible
     }
     
     training_df = pd.DataFrame(training_data)
