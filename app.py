@@ -4,7 +4,6 @@ import re
 import pandas as pd
 import plotly.express as px
 from sklearn.tree import DecisionTreeClassifier
-import numpy as np
 
 # Function to parse PDF and extract data
 def parse_pdf(file):
@@ -17,19 +16,30 @@ def parse_pdf(file):
 # Function to process parsed text into a DataFrame
 def process_text_to_df(text):
     transactions = []
-    transaction_pattern = re.compile(r'(\d{2}/\d{2}/\d{4})\s+(.+?)\s+(-?R?\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s+(-?R?\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s+(-?R?\d{1,3}(?:,\d{3})*(?:\.\d{2})?)')
+    transaction_pattern = re.compile(r'(\d{2}/\d{2}/\d{4})\s+(.+?)\s+(-?R?\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s+(-?R?\d{1,3}(?:,\d{3})*(?:\.\d{2})?)')
+    
+    previous_balance = None
     
     for line in text.split('\n'):
         match = transaction_pattern.search(line)
         if match:
-            date_str, description, fees_str, debits_str, credits_str = match.groups()
-            fees = float(fees_str.replace(',', '').replace('R', '').replace(' ', ''))
-            debits = float(debits_str.replace(',', '').replace('R', '').replace(' ', ''))
-            credits = float(credits_str.replace(',', '').replace('R', '').replace(' ', ''))
-            balance = debits + credits  # Assume balance is sum of debits and credits as a placeholder
-            transactions.append([date_str, description.strip(), fees, debits, credits, balance])
+            date_str, description, amount_str, balance_str = match.groups()
+            amount = float(amount_str.replace(',', '').replace('R', '').replace(' ', ''))
+            balance = float(balance_str.replace(',', '').replace('R', '').replace(' ', ''))
+            
+            if previous_balance is not None:
+                if balance < previous_balance:
+                    transaction_type = 'Debit'
+                else:
+                    transaction_type = 'Credit'
+            else:
+                # If it's the first transaction, we'll categorize it based on the amount
+                transaction_type = 'Debit' if amount < 0 else 'Credit'
+            
+            transactions.append([date_str, description.strip(), amount, balance, transaction_type])
+            previous_balance = balance
     
-    return pd.DataFrame(transactions, columns=['Date', 'Description', 'Fees (R)', 'Debits (R)', 'Credits (R)', 'Balance (R)'])
+    return pd.DataFrame(transactions, columns=['Date', 'Description', 'Amount', 'Balance', 'Type'])
 
 # Function to categorize expenses based on descriptions
 def categorize_expense(description):
@@ -59,21 +69,21 @@ def categorize_expense(description):
 
 # Function to compute key metrics
 def compute_metrics(df):
-    avg_daily_expense = df['Debits (R)'].mean()
-    total_expense = df['Debits (R)'].sum()
-    max_expense = df['Debits (R)'].max()
-    min_expense = df['Debits (R)'].min()
+    avg_daily_expense = df['Amount'].mean()
+    total_expense = df['Amount'].sum()
+    max_expense = df['Amount'].max()
+    min_expense = df['Amount'].min()
     num_transactions = len(df)
     
     # New features
-    num_debits = df[df['Debits (R)'] > 0].shape[0]
-    num_credits = df[df['Credits (R)'] > 0].shape[0]
-    avg_balance = df['Balance (R)'].mean()
-    closing_balance = df['Balance (R)'].iloc[-1]
+    num_debits = df[df['Amount'] < 0].shape[0]
+    num_credits = df[df['Amount'] > 0].shape[0]
+    avg_balance = df['Balance'].mean()
+    closing_balance = df['Balance'].iloc[-1]
     
     return avg_daily_expense, total_expense, max_expense, min_expense, num_transactions, num_debits, num_credits, avg_balance, closing_balance
 
-# Function to train and predict using Decision Tree Classifier with CSV data
+# Function to train and predict using Decision Tree Classifier
 def train_decision_tree_classifier(df):
     # Load dummy training data from CSV
     training_df = pd.read_csv('nedbank.csv')
@@ -154,16 +164,16 @@ def main():
 
             st.subheader('Expense Overview')
 
-            fig_bar = px.bar(df, x='Date', y='Debits (R)', color='Category', title='Total Expenses per Date')
+            fig_bar = px.bar(df, x='Date', y='Amount', color='Category', title='Total Expenses per Date')
             st.plotly_chart(fig_bar)
 
-            fig_pie_category = px.pie(df, values='Debits (R)', names='Category', title='Expense Distribution by Category')
+            fig_pie_category = px.pie(df, values='Amount', names='Category', title='Expense Distribution by Category')
             st.plotly_chart(fig_pie_category)
 
-            fig_pie_description = px.pie(df, values='Debits (R)', names='Description', title='Expense Distribution by Description')
+            fig_pie_description = px.pie(df, values='Amount', names='Description', title='Expense Distribution by Description')
             st.plotly_chart(fig_pie_description)
 
-            fig_line = px.line(df, x='Date', y='Debits (R)', title='Daily Expense Trend')
+            fig_line = px.line(df, x='Date', y='Amount', title='Daily Expense Trend')
             st.plotly_chart(fig_line)
         else:
             st.write("No transactions found in the uploaded statement.")
