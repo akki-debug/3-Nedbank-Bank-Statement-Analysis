@@ -17,17 +17,19 @@ def parse_pdf(file):
 # Function to process parsed text into a DataFrame
 def process_text_to_df(text):
     transactions = []
-    transaction_pattern = re.compile(r'(\d{2}/\d{2}/\d{4})\s+(.+?)\s+(-?R?\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s+(-?R?\d{1,3}(?:,\d{3})*(?:\.\d{2})?)')
+    transaction_pattern = re.compile(r'(\d{2}/\d{2}/\d{4})\s+(.+?)\s+(-?R?\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s+(-?R?\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s+(-?R?\d{1,3}(?:,\d{3})*(?:\.\d{2})?)')
     
     for line in text.split('\n'):
         match = transaction_pattern.search(line)
         if match:
-            date_str, description, amount_str, balance_str = match.groups()
-            amount = float(amount_str.replace(',', '').replace('R', '').replace(' ', ''))
-            balance = float(balance_str.replace(',', '').replace('R', '').replace(' ', ''))
-            transactions.append([date_str, description.strip(), amount, balance])
+            date_str, description, fees_str, debits_str, credits_str = match.groups()
+            fees = float(fees_str.replace(',', '').replace('R', '').replace(' ', ''))
+            debits = float(debits_str.replace(',', '').replace('R', '').replace(' ', ''))
+            credits = float(credits_str.replace(',', '').replace('R', '').replace(' ', ''))
+            balance = debits + credits  # Assume balance is sum of debits and credits as a placeholder
+            transactions.append([date_str, description.strip(), fees, debits, credits, balance])
     
-    return pd.DataFrame(transactions, columns=['Date', 'Description', 'Amount', 'Balance'])
+    return pd.DataFrame(transactions, columns=['Date', 'Description', 'Fees (R)', 'Debits (R)', 'Credits (R)', 'Balance (R)'])
 
 # Function to categorize expenses based on descriptions
 def categorize_expense(description):
@@ -57,17 +59,17 @@ def categorize_expense(description):
 
 # Function to compute key metrics
 def compute_metrics(df):
-    avg_daily_expense = df['Amount'].mean()
-    total_expense = df['Amount'].sum()
-    max_expense = df['Amount'].max()
-    min_expense = df['Amount'].min()
+    avg_daily_expense = df['Debits (R)'].mean()
+    total_expense = df['Debits (R)'].sum()
+    max_expense = df['Debits (R)'].max()
+    min_expense = df['Debits (R)'].min()
     num_transactions = len(df)
     
     # New features
-    num_debits = df[df['Amount'] < 0].shape[0]
-    num_credits = df[df['Amount'] > 0].shape[0]
-    avg_balance = df['Balance'].mean()
-    closing_balance = df['Balance'].iloc[-1]
+    num_debits = df[df['Debits (R)'] > 0].shape[0]
+    num_credits = df[df['Credits (R)'] > 0].shape[0]
+    avg_balance = df['Balance (R)'].mean()
+    closing_balance = df['Balance (R)'].iloc[-1]
     
     return avg_daily_expense, total_expense, max_expense, min_expense, num_transactions, num_debits, num_credits, avg_balance, closing_balance
 
@@ -152,16 +154,16 @@ def main():
 
             st.subheader('Expense Overview')
 
-            fig_bar = px.bar(df, x='Date', y='Amount', color='Category', title='Total Expenses per Date')
+            fig_bar = px.bar(df, x='Date', y='Debits (R)', color='Category', title='Total Expenses per Date')
             st.plotly_chart(fig_bar)
 
-            fig_pie_category = px.pie(df, values='Amount', names='Category', title='Expense Distribution by Category')
+            fig_pie_category = px.pie(df, values='Debits (R)', names='Category', title='Expense Distribution by Category')
             st.plotly_chart(fig_pie_category)
 
-            fig_pie_description = px.pie(df, values='Amount', names='Description', title='Expense Distribution by Description')
+            fig_pie_description = px.pie(df, values='Debits (R)', names='Description', title='Expense Distribution by Description')
             st.plotly_chart(fig_pie_description)
 
-            fig_line = px.line(df, x='Date', y='Amount', title='Daily Expense Trend')
+            fig_line = px.line(df, x='Date', y='Debits (R)', title='Daily Expense Trend')
             st.plotly_chart(fig_line)
         else:
             st.write("No transactions found in the uploaded statement.")
