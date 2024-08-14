@@ -30,16 +30,22 @@ def process_text_to_df(text):
             if previous_balance is not None:
                 if balance < previous_balance:
                     transaction_type = 'Debit'
+                    debit_amount = abs(amount)
+                    credit_amount = 0
                 else:
                     transaction_type = 'Credit'
+                    credit_amount = amount
+                    debit_amount = 0
             else:
-                # If it's the first transaction, we'll categorize it based on the amount
+                # If it's the first transaction, categorize it based on the amount
                 transaction_type = 'Debit' if amount < 0 else 'Credit'
+                debit_amount = abs(amount) if amount < 0 else 0
+                credit_amount = amount if amount > 0 else 0
             
-            transactions.append([date_str, description.strip(), amount, balance, transaction_type])
+            transactions.append([date_str, description.strip(), amount, balance, transaction_type, debit_amount, credit_amount])
             previous_balance = balance
     
-    return pd.DataFrame(transactions, columns=['Date', 'Description', 'Amount', 'Balance', 'Type'])
+    return pd.DataFrame(transactions, columns=['Date', 'Description', 'Amount', 'Balance', 'Type', 'Debit Amount', 'Credit Amount'])
 
 # Function to categorize expenses based on descriptions
 def categorize_expense(description):
@@ -76,8 +82,8 @@ def compute_metrics(df):
     num_transactions = len(df)
     
     # New features
-    num_debits = df[df['Amount'] < 0].shape[0]
-    num_credits = df[df['Amount'] > 0].shape[0]
+    num_debits = df[df['Debit Amount'] > 0].shape[0]
+    num_credits = df[df['Credit Amount'] > 0].shape[0]
     avg_balance = df['Balance'].mean()
     closing_balance = df['Balance'].iloc[-1]
     
