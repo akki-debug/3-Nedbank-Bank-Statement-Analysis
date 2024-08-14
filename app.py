@@ -62,25 +62,33 @@ def compute_metrics(df):
     max_expense = df['Amount'].max()
     min_expense = df['Amount'].min()
     num_transactions = len(df)
-    return avg_daily_expense, total_expense, max_expense, min_expense, num_transactions
+    
+    # New features
+    num_debits = df[df['Amount'] < 0].shape[0]
+    num_credits = df[df['Amount'] > 0].shape[0]
+    avg_balance = df['Balance'].mean()
+    closing_balance = df['Balance'].iloc[-1]
+    
+    return avg_daily_expense, total_expense, max_expense, min_expense, num_transactions, num_debits, num_credits, avg_balance, closing_balance
 
 # Function to train and predict using Decision Tree Classifier with CSV data
 def train_decision_tree_classifier(df):
     # Load dummy training data from CSV
     training_df = pd.read_csv('nedbank.csv')
     
-    X_train = training_df[['Closing Balance', 'Total Credit']]
+    # Generate features for training
+    X_train = training_df[['Closing Balance', 'Total Credit', 'Average Balance', 'Number of Transactions', 'Number of Debits', 'Number of Credits']]
     y_train = training_df['Eligibility']
 
     # Training Decision Tree Classifier
     classifier = DecisionTreeClassifier()
     classifier.fit(X_train, y_train)
 
-    # Predicting with the trained model
-    closing_balance = df['Balance'].iloc[-1]  # Using last balance for prediction
-    total_credit = df[df['Amount'] > 0]['Amount'].sum()
+    # Generate features for prediction
+    avg_daily_expense, total_expense, max_expense, min_expense, num_transactions, num_debits, num_credits, avg_balance, closing_balance = compute_metrics(df)
 
-    loan_eligibility_prediction = classifier.predict([[closing_balance, total_credit]])[0]
+    # Predicting with the trained model
+    loan_eligibility_prediction = classifier.predict([[closing_balance, total_expense, avg_balance, num_transactions, num_debits, num_credits]])[0]
     
     return loan_eligibility_prediction
 
@@ -129,7 +137,7 @@ def main():
             st.subheader('Parsed Data')
             st.write(df)
 
-            avg_daily_expense, total_expense, max_expense, min_expense, num_transactions = compute_metrics(df)
+            avg_daily_expense, total_expense, max_expense, min_expense, num_transactions, num_debits, num_credits, avg_balance, closing_balance = compute_metrics(df)
 
             st.subheader('Key Metrics')
             st.write(f'Average Daily Expense: R{avg_daily_expense:.2f}')
@@ -137,6 +145,10 @@ def main():
             st.write(f'Maximum Expense: R{max_expense:.2f}')
             st.write(f'Minimum Expense: R{min_expense:.2f}')
             st.write(f'Number of Transactions: {num_transactions}')
+            st.write(f'Number of Debits: {num_debits}')
+            st.write(f'Number of Credits: {num_credits}')
+            st.write(f'Average Balance: R{avg_balance:.2f}')
+            st.write(f'Closing Balance: R{closing_balance:.2f}')
 
             st.subheader('Expense Overview')
 
