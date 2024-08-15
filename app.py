@@ -3,9 +3,8 @@ import pdfplumber
 import re
 import pandas as pd
 import plotly.express as px
-from sklearn.ensemble import RandomForestClassifier  # Import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier
 
-# Function to parse PDF and extract data
 def parse_pdf(file):
     with pdfplumber.open(file) as pdf:
         text = ''
@@ -13,11 +12,9 @@ def parse_pdf(file):
             text += page.extract_text()
     return text
 
-# Function to process parsed text into a DataFrame
 def process_text_to_df(text):
     transactions = []
     transaction_pattern = re.compile(r'(\d{2}/\d{2}/\d{4})\s+(.+?)\s+(-?R?\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s+(-?R?\d{1,3}(?:,\d{3})*(?:\.\d{2})?)')
-    
     previous_balance = None
     
     for line in text.split('\n'):
@@ -37,7 +34,6 @@ def process_text_to_df(text):
                     credit_amount = amount
                     debit_amount = 0
             else:
-                # If it's the first transaction, categorize it based on the amount
                 transaction_type = 'Debit' if amount < 0 else 'Credit'
                 debit_amount = abs(amount) if amount < 0 else 0
                 credit_amount = amount if amount > 0 else 0
@@ -47,7 +43,6 @@ def process_text_to_df(text):
     
     return pd.DataFrame(transactions, columns=['Date', 'Description', 'Amount', 'Balance', 'Type', 'Debit Amount', 'Credit Amount'])
 
-# Function to categorize expenses based on descriptions
 def categorize_expense(description):
     description_lower = description.lower()
     if 'cashsend mobile' in description_lower:
@@ -73,15 +68,12 @@ def categorize_expense(description):
     else:
         return 'Others'
 
-# Function to compute key metrics
 def compute_metrics(df):
     avg_daily_expense = df['Amount'].mean()
     total_expense = df['Amount'].sum()
     max_expense = df['Amount'].max()
     min_expense = df['Amount'].min()
     num_transactions = len(df)
-    
-    # New features
     num_debits = df[df['Debit Amount'] > 0].shape[0]
     num_credits = df[df['Credit Amount'] > 0].shape[0]
     avg_balance = df['Balance'].mean()
@@ -89,28 +81,19 @@ def compute_metrics(df):
     
     return avg_daily_expense, total_expense, max_expense, min_expense, num_transactions, num_debits, num_credits, avg_balance, closing_balance
 
-# Function to train and predict using Random Forest Classifier
 def train_random_forest_classifier(df):
-    # Load dummy training data from CSV
     training_df = pd.read_csv('nedbank.csv')
-    
-    # Generate features for training
     X_train = training_df[['Closing Balance', 'Total Credit', 'Average Balance', 'Number of Transactions', 'Number of Debits', 'Number of Credits']]
     y_train = training_df['Eligibility']
 
-    # Training Random Forest Classifier
     classifier = RandomForestClassifier()
     classifier.fit(X_train, y_train)
 
-    # Generate features for prediction
     avg_daily_expense, total_expense, max_expense, min_expense, num_transactions, num_debits, num_credits, avg_balance, closing_balance = compute_metrics(df)
-
-    # Predicting with the trained model
     loan_eligibility_prediction = classifier.predict([[closing_balance, total_expense, avg_balance, num_transactions, num_debits, num_credits]])[0]
     
     return loan_eligibility_prediction
 
-# Streamlit application
 def main():
     st.title('Upload Your Bank Statement')
     
@@ -128,19 +111,13 @@ def main():
 
     st.markdown('<p class="success-message">Congratulations! You\'ve successfully passed the initial eligibility check. Please submit your bank statement so we can complete the final eligibility review.</p>', unsafe_allow_html=True)
 
-    # File upload for PDF statement
     uploaded_file = st.file_uploader('Please upload your bank statement', type='pdf')
     
     if uploaded_file is not None:
         st.write(f'Filename: {uploaded_file.name}')
 
-        # Parse PDF
         text = parse_pdf(uploaded_file)
-        
-        # Process parsed text into DataFrame
         df = process_text_to_df(text)
-        
-        # Convert 'Date' to datetime format
         df['Date'] = pd.to_datetime(df['Date'], format='%d/%m/%Y')
 
         if not df.empty:
@@ -186,6 +163,5 @@ def main():
     else:
         st.write("Please upload a PDF file.")
 
-# Entry point
 if __name__ == '__main__':
     main()
