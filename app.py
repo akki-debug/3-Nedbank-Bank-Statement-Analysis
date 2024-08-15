@@ -3,7 +3,7 @@ import pdfplumber
 import re
 import pandas as pd
 import plotly.express as px
-from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier  # Import RandomForestClassifier
 
 # Function to parse PDF and extract data
 def parse_pdf(file):
@@ -89,8 +89,8 @@ def compute_metrics(df):
     
     return avg_daily_expense, total_expense, max_expense, min_expense, num_transactions, num_debits, num_credits, avg_balance, closing_balance
 
-# Function to train and predict using Decision Tree Classifier
-def train_decision_tree_classifier(df):
+# Function to train and predict using Random Forest Classifier
+def train_random_forest_classifier(df):
     # Load dummy training data from CSV
     training_df = pd.read_csv('nedbank.csv')
     
@@ -98,8 +98,8 @@ def train_decision_tree_classifier(df):
     X_train = training_df[['Closing Balance', 'Total Credit', 'Average Balance', 'Number of Transactions', 'Number of Debits', 'Number of Credits']]
     y_train = training_df['Eligibility']
 
-    # Training Decision Tree Classifier
-    classifier = DecisionTreeClassifier()
+    # Training Random Forest Classifier
+    classifier = RandomForestClassifier()
     classifier.fit(X_train, y_train)
 
     # Generate features for prediction
@@ -145,7 +145,7 @@ def main():
 
         if not df.empty:
             df['Category'] = df['Description'].apply(categorize_expense)
-            loan_eligibility = train_decision_tree_classifier(df)
+            loan_eligibility = train_random_forest_classifier(df)
 
             if loan_eligibility:
                 st.markdown('<p style="color:green;">The user is eligible for a loan.</p>', unsafe_allow_html=True)
